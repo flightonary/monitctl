@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -68,9 +69,40 @@ Options* get_options(int argc, char *argv[])
 Configs* get_configs(Options *opts)
 {
 	Configs *configs;
+	FILE *fp;
+	char line[256], key[256], value[256];
+	char *action;
+	int index;
 
 	configs = (Configs *)malloc(sizeof(Configs));
-	configs->monit_path = "/usr/bin/monit";
+	configs->monit_path = "";
+	configs->allow_actions = (char **)malloc(sizeof(char *) * 32);
+	configs->action_num = 0;
+
+	fp = fopen(opts->config_file, "r");
+	if(fp == NULL) {
+	  fprintf(stderr, "config file open error (file:%s)", opts->config_file);
+	}
+
+	while(fgets(line, sizeof(line), fp) != NULL) {
+	  if(line[0] == '#') {
+	    continue;
+	  }
+
+	  sscanf(line, "%255s%255s", key, value);
+	  if(strcmp(key, "monit_path") == 0) {
+	    configs->monit_path = strdup(value);
+	  }
+	  else if(strcmp(key, "allow_actions") == 0) {
+	    for(action = strtok(value, ","); action; action = strtok(NULL, ",")) {
+	      index = configs->action_num;
+	      configs->allow_actions[index] = strdup(action);
+	      configs->action_num++;
+	    }
+	  }
+	}
+
+	//configs->monit_path = "/usr/bin/monit";
 
 	return configs;
 }
