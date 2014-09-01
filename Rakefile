@@ -1,6 +1,7 @@
 require 'rake/clean'
 
 CC = "gcc"
+cflags = "-std=c99 -Wall"
 SRCS = FileList["*.c"]
 OBJS = SRCS.ext('o')
 
@@ -9,12 +10,17 @@ CLOBBER.include("monitctl")
 
 task :default => :monitctl
 
+task :debug do
+  cflags += " -DDEBUG -g"
+  Rake::Task['monitctl'].invoke
+end
+
 desc "build monitctl"
 file :monitctl => OBJS do |t|
-  sh "#{CC} -o #{t.name} #{t.prerequisites.join(' ')}"
+  sh "#{CC} #{cflags} -o #{t.name} #{t.prerequisites.join(' ')}"
 end
 
 desc "complile all sources"
 rule '.o' => ['.c'] do |t|
-  sh "#{CC} -c #{t.source} -o #{t.name}"
+  sh "#{CC} #{cflags} -c #{t.source} -o #{t.name}"
 end
