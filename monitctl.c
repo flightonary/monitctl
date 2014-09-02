@@ -77,23 +77,27 @@ Options* get_options(int argc, char *argv[])
 
 bool check_config_file_permission(Options *opts)
 {
-    int FILE_MODE_MASK = S_IRWXU | S_IRWXG | S_IRWXO;
-    int RW_ONLY_OWNER = S_IRUSR | S_IWUSR;
     struct stat info;
 
-    if(!stat(opts->config_file, &info)) {
-        fprintf(stderr, "get config file stat error\n");
+    if(access(opts->config_file, F_OK) != 0) {
+        fprintf(stderr, "[monitctl] config file(%s) does not exist\n", opts->config_file);
         return false;
     }
 
-    if(S_ISREG(info.st_mode) &&                            // Regular file and,
-       (info.st_mode & FILE_MODE_MASK) == RW_ONLY_OWNER && // File mode is 0600 and,
-       info.st_uid == getuid()                             // real uid(after reset effective uid) is same.
+    if(stat(opts->config_file, &info) != 0) {
+        fprintf(stderr, "[monitctl] Error in getting config file's stat\n");
+        return false;
+    }
+
+    if(S_ISREG(info.st_mode) &&                          // Regular file and,
+       (info.st_mode & (S_IWGRP | S_IWOTH)) == 0x00 &&   // Group and other are not allowed to write and,
+       info.st_uid == geteuid()                          // file owner and effective uid is same.
        ) {
         return true;
     }
 
-    fprintf(stderr, "Config file(%s) file mode must be 0600 and owner must be effective uid\n", opts->config_file);
+    fprintf(stderr, "[monitctl] Group and other are not allowed to write config file(%s) and "
+                    "owner must be same as effective uid\n", opts->config_file);
     return false;
 }
 
@@ -112,7 +116,7 @@ Configs* get_configs(Options *opts)
 
     fp = fopen(opts->config_file, "r");
     if(fp == NULL) {
-        fprintf(stderr, "config file open error (file:%s)\n", opts->config_file);
+        fprintf(stderr, "[monitctl] Error in openning config file (file:%s)\n", opts->config_file);
         return NULL;
     }
 
@@ -156,7 +160,7 @@ bool check_allow_actions(Options *opts, Configs *configs)
             return true;
     }
 
-    fprintf(stderr, "action '%s' is forbidden\n", opts->action);
+    fprintf(stderr, "[monitctl] Action '%s' is forbidden\n", opts->action);
 
     return false;
 }
@@ -173,7 +177,7 @@ bool reset_real_uid(void)
     ret_getresgid = getresgid(&rgid, &egid, &sgid);
 
     if(ret_getresuid != 0 || ret_getresgid != 0) {
-        fprintf(stderr, "getresuid/getresgid error\n");
+        fprintf(stderr, "[monitctl] Error: getresuid/getresgid\n");
         return false;
     }
 
@@ -183,7 +187,7 @@ bool reset_real_uid(void)
     ret_setregid = setregid(egid, NO_CHANGE);
 
     if(ret_setreuid != 0 || ret_setregid != 0) {
-        fprintf(stderr, "setreuid/setregid error\n");
+        fprintf(stderr, "[monitctl] Error: setreuid/setregid\n");
         return false;
     }
 
@@ -239,6 +243,6 @@ int main(int argc, char *argv[])
 
     invoke_monit(opts, configs);
 
-    fprintf(stderr, "monit execution error\n");
+    fprintf(stderr, "[monitctl] Error in executing monit\n");
     exit(EXIT_FAILURE);
 }

@@ -5,6 +5,8 @@ cflags = "-std=c99 -Wall"
 SRCS = FileList["*.c"]
 OBJS = SRCS.ext('o')
 
+cflags += " -DCONFIG_FILE=\\\"#{ENV['config_file']}\\\"" if ENV['config_file']
+
 CLEAN.include(OBJS)
 CLOBBER.include("monitctl")
 
