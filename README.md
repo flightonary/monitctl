@@ -22,7 +22,7 @@ How it works
 
 Contributors
 ------------
-jetbeaver (jetbeaver@gmail.com)
+tonary (nekomelife@gmail.com)
 
 History
 -------
